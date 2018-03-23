@@ -3,5 +3,5 @@
 
 	void zing()
 	{
-		printf("Hello!!!ooooo %s, it's me, Patrick!\nHello!\nAre you still there?\n",getlogin());
+		printf("Helloooooo %s! It's me, Patrick!\nHello!\nAre you still there?\n",getlogin());
 	}
