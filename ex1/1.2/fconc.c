@@ -54,18 +54,21 @@ void write_file(int fd, const char *infile){
 
 int main(int argc, char **argv)
 {
+	int infiles_n;
 	char* filename;
 
-	if (argc < 3){				// <2 arguments -> Error
+	if (argc < 3){				// <2 infiles -> Error
 		printf("We must construct additional pyl..arguments!\n");
-		printf("Usage: ./fconc infile1 infile2 [outfile (default:fconc.out)\n");
+		printf("Usage: ./fconc infile1 infile2 [outfile (default:fconc.out)]\n");
 		exit(1);
 		}				
-	else if (argc == 3){			//  2 arguments -> filename = default 
-		 filename = "fconc.out"; 
+	else if (argc == 3){			//  2 infiles -> filename = default 
+		 filename = "fconc.out";
+		 infiles_n = 2; 		// practically a flag, default is 2
   	}
-	else { 					// >2 arguments -> filename = last argument
+	else { 					// >2 infiles -> filename = last argument
 		 filename = argv[argc-1];
+		 infiles_n = argc - 2;		// number of infiles = argc - last_arg - 1
 	}		
 
 	int fd, oflags, mode;
@@ -78,8 +81,8 @@ int main(int argc, char **argv)
 	}
 	
 	/*now for da good stuff*/
-	for (int i = 1; i < argc-1; i++) {
-                printf("%s\n", argv[i]);
+	for (int i = 1; i <= infiles_n; i++) {   // repeat for any number of infiles given (=> 2)
+               // printf("%s\n", argv[i]); used for testing
 		write_file(fd, argv[i]);
 	}	
 			
