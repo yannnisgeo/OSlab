@@ -81,7 +81,8 @@ int main(int argc, char **argv)
 	}
 	
 	/*now for da good stuff*/
-	for (int i = 1; i <= infiles_n; i++) {   // repeat for any number of infiles given (=> 2)
+	int i;
+	for (i = 1; i <= infiles_n; i++) {   // repeat for any number of infiles given (=> 2)
                // printf("%s\n", argv[i]); used for testing
 		write_file(fd, argv[i]);
 	}	
