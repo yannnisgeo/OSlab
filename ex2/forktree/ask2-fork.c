@@ -54,11 +54,13 @@ void fork_procs(void)
 		fork_proc_leaf("C", 17);
 	}
 	//Force A to wait for children to finish
-	printf("A: Waiting for children (B, C, D) to finish...\n");
+	printf("A: Waiting for children (B, C) to finish...\n");
 	
 	pid = wait(&status);
         explain_wait_status(pid, status);
-
+	//A has to wait for 2 children
+	pid = wait(&status);
+        explain_wait_status(pid, status);
 	/* ... */
 		
 	printf("A: Exiting...\n");
