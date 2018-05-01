@@ -28,34 +28,39 @@ void fork_procs(void)
 
 	change_pname("A");
 	printf("A: Initiating...\n");
-	//sleep(SLEEP_PROC_SEC);
 
 	/* ... */
         
 	/* Forking B process */
-	pid_t pB;//, mypid;
-	
-	pB = fork();
-	if (pB < 0) {
+	//pid_t pB;//, mypid;
+	pid_t pid;
+	int status;
+		
+	pid = fork();
+	if (pid < 0) {
 		perror("B: fork");
 		exit(1);
-	} else if (pB == 0) {
-		//mypid = getpid();
+	} else if (pid == 0) {
 		fork_procB();
 	}
 	// Done with B, D. On to C.
 
-	pid_t pC;
-	pC = fork();
-	if (pC<0) {
+	//pid_t pC;
+	pid = fork();
+	if (pid < 0) {
 		perror("C: fork");
 		exit(1);
-	} else if (pC == 0) {
-		//mypid = getpid();
+	} else if (pid == 0) {
 		fork_proc_leaf("C", 17);
 	}
-	/* ... */
+	//Force A to wait for children to finish
+	printf("A: Waiting for children (B, C, D) to finish...\n");
 	
+	pid = wait(&status);
+        explain_wait_status(pid, status);
+
+	/* ... */
+		
 	printf("A: Exiting...\n");
 	exit(16);
 }
@@ -65,20 +70,26 @@ void fork_procB(void)
 {
 	change_pname("B");
         printf("B: Initiating...\n");
-        //sleep(SLEEP_PROC_SEC);
 
        	/* Forking D process */
-       	pid_t pD;
-
-       	pD = fork();
-       	if (pD < 0) {
+        //pid_t pD;
+	pid_t pid;
+	int status;
+	
+       	pid = fork();
+       	if (pid < 0) {
                	perror("D: fork");
                	exit(1);
-       	} else if (pD == 0) {
-            	//mypid = getpid();
+       	} else if (pid == 0) {
                	fork_proc_leaf("D", 13);
        	}
+	
+	//Force B to wait for child to finish
+	printf("B: Waiting for child (D) to finish...\n");	
 
+	pid = wait(&status);
+        explain_wait_status(pid, status);
+	
         printf("B: Exiting...\n");
         exit(19);
 }
