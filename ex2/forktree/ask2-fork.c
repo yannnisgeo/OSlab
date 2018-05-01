@@ -1,4 +1,4 @@
-#includei <unistd.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -15,6 +15,11 @@
  * A-+-B---D
  *   `-C
  */
+
+/* Created a function for every fork handle */
+void fork_procB(void);
+void fork_proc_leaf(char * proc_name, int exit_number);
+
 void fork_procs(void)
 {
 	/*
@@ -22,20 +27,20 @@ void fork_procs(void)
 	 */
 
 	change_pname("A");
-	printf("A: Sleeping...\n");
-	sleep(SLEEP_PROC_SEC);
+	printf("A: Initiating...\n");
+	//sleep(SLEEP_PROC_SEC);
 
 	/* ... */
         
 	/* Forking B process */
-	pid_t pB;
+	pid_t pB;//, mypid;
 	
 	pB = fork();
 	if (pB < 0) {
 		perror("B: fork");
 		exit(1);
 	} else if (pB == 0) {
-		mypid = getpid();
+		//mypid = getpid();
 		fork_procB();
 	}
 	// Done with B, D. On to C.
@@ -46,11 +51,11 @@ void fork_procs(void)
 		perror("C: fork");
 		exit(1);
 	} else if (pC == 0) {
-		mypid = getpid();
-		fork_procC();
+		//mypid = getpid();
+		fork_proc_leaf("C", 17);
 	}
 	/* ... */
-
+	
 	printf("A: Exiting...\n");
 	exit(16);
 }
@@ -59,10 +64,8 @@ void fork_procs(void)
 void fork_procB(void)
 {
 	change_pname("B");
-       	printf("A: Sleeping...\n");
-      	sleep(SLEEP_PROC_SEC);
-
-       	/* ... */
+        printf("B: Initiating...\n");
+        //sleep(SLEEP_PROC_SEC);
 
        	/* Forking D process */
        	pid_t pD;
@@ -72,39 +75,25 @@ void fork_procB(void)
                	perror("D: fork");
                	exit(1);
        	} else if (pD == 0) {
-            	mypid = getpid();
-               	fork_procD();
+            	//mypid = getpid();
+               	fork_proc_leaf("D", 13);
        	}
-
-        /* ... */
 
         printf("B: Exiting...\n");
         exit(19);
 }
 
-/* proc C (leaf) shall sleep for a while, then return */
-void fork_procC(void)
+/* proc leaf (C, D) shall sleep for a while, then return */
+void fork_proc_leaf(char * proc_name, int exit_number)
 {
-        change_pname("C");
-        printf("C: Sleeping...\n");
+        change_pname(proc_name);
+	printf("%s: Initiating...\n", proc_name);
+	printf("%s: Sleeping...\n", proc_name);
         sleep(SLEEP_PROC_SEC);
 
-        printf("C: Exiting...\n");
-        exit(17);
+        printf("%s: Exiting...\n", proc_name);
+        exit(exit_number);
 }
-
-
-/* proc D (leaf) shall sleep for a while, then return */
-void fork_procD(void)
-{
-        change_pname("D");
-        printf("D: Sleeping...\n");
-        sleep(SLEEP_PROC_SEC);
-
-        printf("D: Exiting...\n");
-        exit(13);
-}
-
 
 /*
  * The initial process forks the root of the process tree,
