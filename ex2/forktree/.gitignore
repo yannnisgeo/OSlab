@@ -1,0 +1,12 @@
+#ignore the following
+
+#object files
+
+*.o
+
+#executable
+
+tree-example 
+fork-example 
+pstree-this 
+ask2-{fork,tree,signals,pipes}

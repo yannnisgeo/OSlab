@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: fork-example tree-example ask2-fork ask2-signals
+all: fork-example tree-example ask2-fork ask2-tree ask2-signals
 
 CC = gcc
 CFLAGS = -g -Wall -O2
@@ -13,6 +13,9 @@ fork-example: fork-example.o proc-common.o
 	$(CC) $(CFLAGS) $^ -o $@
 
 ask2-fork: ask2-fork.o proc-common.o
+	$(CC) $(CFLAGS) $^ -o $@
+
+ask2-tree: ask2-tree.o proc-common.o tree.o 
 	$(CC) $(CFLAGS) $^ -o $@
 
 ask2-signals: ask2-signals.o proc-common.o tree.o
