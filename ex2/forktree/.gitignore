@@ -1,12 +1,13 @@
-#ignore the following
+#ignore the following:
 
 #object files
-
 *.o
 
-#executable
-
+#executable files
 tree-example 
 fork-example 
 pstree-this 
-ask2-{fork,tree,signals,pipes}
+ask2-fork
+ask2-tree
+ask2-signals
+ask2-pipes

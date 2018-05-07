@@ -1,0 +1,10 @@
+#ignore the following
+#object files created by make only
+
+main.o
+zing2.o
+
+#executable files
+
+main
+zing2
