@@ -32,7 +32,6 @@ void fork_procs(void)
 	/* ... */
         
 	/* Forking B process */
-	//pid_t pB;//, mypid;
 	pid_t pid;
 	int status;
 		
@@ -43,9 +42,8 @@ void fork_procs(void)
 	} else if (pid == 0) {
 		fork_procB();
 	}
-	// Done with B, D. On to C.
 
-	//pid_t pC;
+	// Done with B, D. On to C.
 	pid = fork();
 	if (pid < 0) {
 		perror("C: fork");
@@ -53,6 +51,7 @@ void fork_procs(void)
 	} else if (pid == 0) {
 		fork_proc_leaf("C", 17);
 	}
+
 	//Force A to wait for children to finish
 	printf("A: Waiting for children (B, C) to finish...\n");
 	
@@ -61,6 +60,7 @@ void fork_procs(void)
 	//A has to wait for 2 children
 	pid = wait(&status);
         explain_wait_status(pid, status);
+
 	/* ... */
 		
 	printf("A: Exiting...\n");
@@ -74,7 +74,6 @@ void fork_procB(void)
         printf("B: Initiating...\n");
 
        	/* Forking D process */
-        //pid_t pD;
 	pid_t pid;
 	int status;
 	
@@ -101,6 +100,7 @@ void fork_proc_leaf(char * proc_name, int exit_number)
 {
         change_pname(proc_name);
 	printf("%s: Initiating...\n", proc_name);
+
 	printf("%s: Sleeping...\n", proc_name);
         sleep(SLEEP_PROC_SEC);
 
@@ -148,9 +148,6 @@ int main(void)
 
 	/* Print the process tree root at pid */
 	show_pstree(pid);
-
-	/* for ask2-signals */
-	/* kill(pid, SIGCONT); */
 
 	/* Wait for the root of the process tree to terminate */
 	pid = wait(&status);

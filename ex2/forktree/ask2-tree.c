@@ -16,97 +16,64 @@
  * Create given process tree:
  */
 
-/* Created a function for every fork handle */
-void fork_procB(void);
-void fork_proc_leaf(char * proc_name, int exit_number);
 
-void fork_procs(void)
+static void 
+__fork_procs(struct tree_node *root, int level)
 {
 	/*
-	 * initial process is A.
+	 * initial process is (*root).name.
 	 */
 
-	change_pname("A");
-	printf("A: Initiating...\n");
+	change_pname(root->name);
+	printf("%s: Initiating...\n", root->name);
 
-	/* ... */
-        
-	/* Forking B process */
-	//pid_t pB;//, mypid;
+	/* 
+	 *Forking recursively to next 
+	 * child process in DFS order 
+	 */
+
 	pid_t pid;
-	int status;
-		
-	pid = fork();
-	if (pid < 0) {
-		perror("B: fork");
-		exit(1);
-	} else if (pid == 0) {
-		fork_procB();
-	}
-	// Done with B, D. On to C.
-
-	//pid_t pC;
-	pid = fork();
-	if (pid < 0) {
-		perror("C: fork");
-		exit(1);
-	} else if (pid == 0) {
-		fork_proc_leaf("C", 17);
-	}
-	//Force A to wait for children to finish
-	printf("A: Waiting for children (B, C) to finish...\n");
+	int i, status;
 	
-	pid = wait(&status);
-        explain_wait_status(pid, status);
-	//A has to wait for 2 children
-	pid = wait(&status);
-        explain_wait_status(pid, status);
-	/* ... */
-		
-	printf("A: Exiting...\n");
+	for (i=0; i < root->nr_children; i++) {	
+		pid = fork();
+		if (pid < 0) {
+			perror("fork_procs: fork");
+			exit(1);
+		} else if (pid == 0) {
+			__fork_procs(root->children + i, level + 1);
+		}
+	}
+	
+	if (root->nr_children > 0) {	
+		//Force root to wait for children to finish
+		printf("%s: waiting for %d children...\n", root->name, root->nr_children);
+	
+		//root has to wait for nr_children
+		for (i=0; i < root->nr_children; i++){
+			pid = wait(&status);
+       			explain_wait_status(pid, status);
+		}
+	} else if (root->nr_children == 0) {
+		//if root has no children, it's a leaf
+		printf("%s: Sleeping...\n", root->name);		
+		sleep(SLEEP_PROC_SEC);
+	}	
+	printf("%s: Exiting...\n", root->name);
 	exit(16);
 }
 
-/* proc B will fork D */
-void fork_procB(void)
+
+/*
+ *the fuction we call to use the above,
+ *level = 0, cuz we start from the root
+ */
+void 
+fork_procs(struct tree_node *root)
 {
-	change_pname("B");
-        printf("B: Initiating...\n");
-
-       	/* Forking D process */
-        //pid_t pD;
-	pid_t pid;
-	int status;
-	
-       	pid = fork();
-       	if (pid < 0) {
-               	perror("D: fork");
-               	exit(1);
-       	} else if (pid == 0) {
-               	fork_proc_leaf("D", 13);
-       	}
-	
-	//Force B to wait for child to finish
-	printf("B: Waiting for child (D) to finish...\n");	
-
-	pid = wait(&status);
-        explain_wait_status(pid, status);
-	
-        printf("B: Exiting...\n");
-        exit(19);
+	__fork_procs(root, 0);
 }
 
-/* proc leaf (C, D) shall sleep for a while, then return */
-void fork_proc_leaf(char * proc_name, int exit_number)
-{
-        change_pname(proc_name);
-	printf("%s: Initiating...\n", proc_name);
-	printf("%s: Sleeping...\n", proc_name);
-        sleep(SLEEP_PROC_SEC);
-
-        printf("%s: Exiting...\n", proc_name);
-        exit(exit_number);
-}
 
 /*
  * The initial process forks the root of the process tree,
@@ -120,7 +87,7 @@ void fork_proc_leaf(char * proc_name, int exit_number)
  *      use wait_for_ready_children() to wait until
  *      the first process raises SIGSTOP.
  */
-int main(int argc,char *argv[])
+int main(int argc, char *argv[])
 {
 	/*check for input, get tree and print it*/
 	struct tree_node *root;
@@ -132,7 +99,6 @@ int main(int argc,char *argv[])
 
         root = get_tree_from_file(argv[1]);
         print_tree(root);
-
 	
 	pid_t pid;
 	int status;
@@ -145,15 +111,13 @@ int main(int argc,char *argv[])
 	}
 	if (pid == 0) {
 		/* Child */
-		fork_procs();
+		fork_procs(root);
 		exit(1);
 	}
 
 	/*
 	 * Father
 	 */
-	/* for ask2-signals */
-	/* wait_for_ready_children(1); */
 
 	/* for ask2-{fork, tree} */
 	sleep(SLEEP_TREE_SEC);
