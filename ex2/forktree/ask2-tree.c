@@ -18,12 +18,12 @@
 
 
 static void 
-__fork_procs(struct tree_node *root, int level)
+__fork_procs(struct tree_node *root, int level, int exit_no)
 {
 	/*
 	 * initial process is (*root).name.
 	 */
-
+	
 	change_pname(root->name);
 	printf("%s: Initiating...\n", root->name);
 
@@ -31,7 +31,8 @@ __fork_procs(struct tree_node *root, int level)
 	 *Forking recursively to next 
 	 * child process in DFS order 
 	 */
-
+	
+	
 	pid_t pid;
 	int i, status;
 	
@@ -41,7 +42,7 @@ __fork_procs(struct tree_node *root, int level)
 			perror("fork_procs: fork");
 			exit(1);
 		} else if (pid == 0) {
-			__fork_procs(root->children + i, level + 1);
+			__fork_procs(root->children + i, level + 1, i);
 		}
 	}
 	
@@ -60,7 +61,13 @@ __fork_procs(struct tree_node *root, int level)
 		sleep(SLEEP_PROC_SEC);
 	}	
 	printf("%s: Exiting...\n", root->name);
-	exit(16);
+	/*
+	 *creating a semi-unique exit number for 
+	 *each proccess considering 
+	 *exit() outputs (exit_no)mod256 
+	 */
+	exit_no += level*(10); 
+	exit(exit_no);
 }
 
 
@@ -71,7 +78,7 @@ __fork_procs(struct tree_node *root, int level)
 void 
 fork_procs(struct tree_node *root)
 {
-	__fork_procs(root, 0);
+	__fork_procs(root, 0, 1);
 }
 
 
