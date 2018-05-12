@@ -24,35 +24,21 @@ __fork_procs(struct tree_node *root, int level, int exit_no)
 
 	/*
 	 *Forking recursively to next
-	 * child process in DFS order
+	 *child process in DFS order 
 	 */
-
-	pid_t pid;
+ 
+	/*saving pids of immediate chilren in an array*/
+	pid_t pid[root->nr_children];
 	int i, status;
 
 	for (i=0; i < root->nr_children; i++) {
-		pid = fork();
-		if (pid < 0) {
+		pid[i] = fork();
+		if (pid[i] < 0) {
 			perror("fork_procs: fork");
 			exit(1);
-		} else if (pid == 0) {
+		} else if (pid[i] == 0) {
 			__fork_procs(root->children + i, level + 1, i);
 		}
-	}
-
-	if (root->nr_children > 0) {
-		//Force root to wait for children to finish
-		printf("%s: waiting for %d children...\n",
-				root->name, root->nr_children);
-
-		for (i=0; i < root->nr_children; i++){
-			pid = wait(&status);
-  			explain_wait_status(pid, status);
-		}
-	} else if (root->nr_children == 0) {
-		//if root has no children, it's a leaf
-	//	printf("%s: Sleeping...\n", root->name);
-	//	sleep(SLEEP_PROC_SEC);
 	}
 
 	/*wait for children to stop*/
@@ -62,13 +48,24 @@ __fork_procs(struct tree_node *root, int level, int exit_no)
          *Suspend self.
          */
         raise(SIGSTOP);
+	/*Process woken up*/
         printf("PID = %ld, name = %s is awake\n",
                 (long)getpid(), root->name);
-	
 
-	/*continue*/
-	//kill(pid, SIGCONT);
+	/*Wake up children, in DFS order*/
+	printf("%s: waiting for %d children...\n",
+		root->name, root->nr_children);
 	
+	for (i = 0; i < root->nr_children; i++) {
+		/*wake up immidiate child*/
+		kill(pid[i],SIGCONT); 
+		
+		/*wait for it to finish*/
+		wait(&status);
+        	explain_wait_status(pid[i], status);		
+	}
+
+	/*exit*/	
 	printf("PID = %ld, name %s, exiting...\n",
                         (long)getpid(), root->name);
 	
@@ -141,7 +138,7 @@ int main(int argc, char *argv[])
 	/* Print the process tree root at pid */
 	show_pstree(pid);
 
-	/* for ask2-signals */
+	/* for ask2-signals */	
 	kill(pid, SIGCONT);
 
 	/* Wait for the root of the process tree to terminate */
