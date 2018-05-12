@@ -6,8 +6,7 @@
 #include <sys/wait.h>
 
 #include "proc-common.h"
-
-#include "tree.h" 
+#include "tree.h"
 
 #define SLEEP_PROC_SEC  10
 #define SLEEP_TREE_SEC  3
@@ -17,26 +16,25 @@
  */
 
 
-static void 
+static void
 __fork_procs(struct tree_node *root, int level, int exit_no)
 {
 	/*
 	 * initial process is (*root).name.
 	 */
-	
+
 	change_pname(root->name);
 	printf("%s: Initiating...\n", root->name);
 
-	/* 
-	 *Forking recursively to next 
-	 * child process in DFS order 
+	/*
+	 *Forking recursively to next
+	 * child process in DFS order
 	 */
-	
-	
+
 	pid_t pid;
 	int i, status;
-	
-	for (i=0; i < root->nr_children; i++) {	
+
+	for (i=0; i < root->nr_children; i++) {
 		pid = fork();
 		if (pid < 0) {
 			perror("fork_procs: fork");
@@ -45,11 +43,12 @@ __fork_procs(struct tree_node *root, int level, int exit_no)
 			__fork_procs(root->children + i, level + 1, i);
 		}
 	}
-	
-	if (root->nr_children > 0) {	
+
+	if (root->nr_children > 0) {
 		//Force root to wait for children to finish
-		printf("%s: waiting for %d children...\n", root->name, root->nr_children);
-	
+		printf("%s: waiting for %d children...\n",
+				root->name, root->nr_children);
+
 		//root has to wait for nr_children
 		for (i=0; i < root->nr_children; i++){
 			pid = wait(&status);
@@ -57,16 +56,16 @@ __fork_procs(struct tree_node *root, int level, int exit_no)
 		}
 	} else if (root->nr_children == 0) {
 		//if root has no children, it's a leaf
-		printf("%s: Sleeping...\n", root->name);		
+		printf("%s: Sleeping...\n", root->name);
 		sleep(SLEEP_PROC_SEC);
-	}	
+	}
 	printf("%s: Exiting...\n", root->name);
 	/*
-	 *creating a semi-unique exit number for 
-	 *each proccess considering 
-	 *exit() outputs (exit_no)mod256 
+	 *creating a semi-unique exit number for
+	 *each proccess considering
+	 *exit() outputs (exit_no)mod256
 	 */
-	exit_no += level*(10); 
+	exit_no += level*(10);
 	exit(exit_no);
 }
 
@@ -75,7 +74,7 @@ __fork_procs(struct tree_node *root, int level, int exit_no)
  *the fuction we call to use the above,
  *level = 0, cuz we start from the root
  */
-void 
+void
 fork_procs(struct tree_node *root)
 {
 	__fork_procs(root, 0, 1);
@@ -97,18 +96,19 @@ fork_procs(struct tree_node *root)
 int main(int argc, char *argv[])
 {
 	/*check for input, get tree and print it*/
+	pid_t pid;
+	int status;
 	struct tree_node *root;
 
         if (argc != 2) {
-                fprintf(stderr, "Usage: %s <input_tree_file>\n\n", argv[0]);
+                fprintf(stderr, "Usage: %s <input_tree_file>\n\n",
+				 		argv[0]);
                 exit(1);
         }
 
-        root = get_tree_from_file(argv[1]);
-        print_tree(root);
-	
-	pid_t pid;
-	int status;
+	/* Read tree into memory*/
+    root = get_tree_from_file(argv[1]);
+    print_tree(root);
 
 	/* Fork root of process tree */
 	pid = fork();

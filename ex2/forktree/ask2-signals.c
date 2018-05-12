@@ -9,31 +9,89 @@
 #include "tree.h"
 #include "proc-common.h"
 
-void fork_procs(struct tree_node *root)
+
+static void
+__fork_procs(struct tree_node *root, int level, int exit_no)
 {
 	/*
-	 * Start
+	 * Start creating child processes.
+	 * Initial process is (*root).name.
 	 */
-	printf("PID = %ld, name %s, starting...\n",
-			(long)getpid(), root->name);
-	change_pname(root->name);
 
-	/* ... */
+	 printf("PID = %ld, name %s, starting...\n",
+ 			(long)getpid(), root->name);
+ 	change_pname(root->name);
 
 	/*
-	 * Suspend Self
+	 *Forking recursively to next
+	 * child process in DFS order
 	 */
-	raise(SIGSTOP);
-	printf("PID = %ld, name = %s is awake\n",
-		(long)getpid(), root->name);
 
-	/* ... */
+	pid_t pid;
+	int i, status;
 
+	for (i=0; i < root->nr_children; i++) {
+		pid = fork();
+		if (pid < 0) {
+			perror("fork_procs: fork");
+			exit(1);
+		} else if (pid == 0) {
+			__fork_procs(root->children + i, level + 1, i);
+		}
+	}
+
+	if (root->nr_children > 0) {
+		//Force root to wait for children to finish
+		printf("%s: waiting for %d children...\n",
+				root->name, root->nr_children);
+
+		for (i=0; i < root->nr_children; i++){
+			pid = wait(&status);
+  			explain_wait_status(pid, status);
+		}
+	} else if (root->nr_children == 0) {
+		//if root has no children, it's a leaf
+	//	printf("%s: Sleeping...\n", root->name);
+	//	sleep(SLEEP_PROC_SEC);
+	}
+
+	/*wait for children to stop*/
+	wait_for_ready_children(root->nr_children);
+	
+        /*
+         *Suspend self.
+         */
+        raise(SIGSTOP);
+        printf("PID = %ld, name = %s is awake\n",
+                (long)getpid(), root->name);
+	
+
+	/*continue*/
+	//kill(pid, SIGCONT);
+	
+	printf("PID = %ld, name %s, exiting...\n",
+                        (long)getpid(), root->name);
+	
 	/*
-	 * Exit
+	 *creating a semi-unique exit number for
+	 *each proccess considering
+	 *exit() outputs (exit_no)mod256
 	 */
-	exit(0);
+	exit_no += level*(10);
+	exit(exit_no);
 }
+
+
+/*
+ *the fuction we call to use the above,
+ *level = 0, cuz we start from the root
+ */
+void
+fork_procs(struct tree_node *root)
+{
+	__fork_procs(root, 0, 1);
+}
+
 
 /*
  * The initial process forks the root of the process tree,
@@ -79,9 +137,6 @@ int main(int argc, char *argv[])
 	 */
 	/* for ask2-signals */
 	wait_for_ready_children(1);
-
-	/* for ask2-{fork, tree} */
-	/* sleep(SLEEP_TREE_SEC); */
 
 	/* Print the process tree root at pid */
 	show_pstree(pid);
