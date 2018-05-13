@@ -18,8 +18,8 @@ __fork_procs(struct tree_node *root, int level, int exit_no)
 	 * Initial process is (*root).name.
 	 */
 
-	 printf("PID = %ld, name %s, starting...\n",
- 			(long)getpid(), root->name);
+	printf("PID = %ld, name %s, starting...\n",
+			(long)getpid(), root->name);
  	change_pname(root->name);
 
 	/*
@@ -53,9 +53,6 @@ __fork_procs(struct tree_node *root, int level, int exit_no)
                 (long)getpid(), root->name);
 
 	/*Wake up children, in DFS order*/
-	printf("%s: waiting for %d children...\n",
-		root->name, root->nr_children);
-	
 	for (i = 0; i < root->nr_children; i++) {
 		/*wake up immidiate child*/
 		kill(pid[i],SIGCONT); 
