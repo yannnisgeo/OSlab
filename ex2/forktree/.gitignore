@@ -6,6 +6,7 @@
 #executable files
 tree-example 
 fork-example 
+pipe-example
 pstree-this 
 ask2-fork
 ask2-tree
