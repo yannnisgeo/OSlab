@@ -59,6 +59,7 @@ __fork_procs(struct tree_node *root, int level, int exit_no)
 		printf("%s: Sleeping...\n", root->name);
 		sleep(SLEEP_PROC_SEC);
 	}
+	
 	printf("%s: Exiting...\n", root->name);
 	/*
 	 *creating a semi-unique exit number for
@@ -107,8 +108,8 @@ int main(int argc, char *argv[])
         }
 
 	/* Read tree into memory*/
-    root = get_tree_from_file(argv[1]);
-    print_tree(root);
+	root = get_tree_from_file(argv[1]);
+	print_tree(root);
 
 	/* Fork root of process tree */
 	pid = fork();

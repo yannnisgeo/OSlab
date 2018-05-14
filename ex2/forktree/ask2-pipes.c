@@ -23,8 +23,9 @@ __fork_procs(struct tree_node *root, int level, int exit_no)
 	 * initial process is (*root).name.
 	 */
 
-	change_pname(root->name);
-	printf("%s: Initiating...\n", root->name);
+        printf("PID = %ld, name %s, starting...\n",
+                        (long)getpid(), root->name);
+        change_pname(root->name);
 
 	/*
 	 *Forking recursively to next
@@ -33,7 +34,8 @@ __fork_procs(struct tree_node *root, int level, int exit_no)
 
 	pid_t pid;
 	int i, status;
-
+	double val, ans[2];
+	
 	for (i=0; i < root->nr_children; i++) {
 		pid = fork();
 		if (pid < 0) {
@@ -44,22 +46,51 @@ __fork_procs(struct tree_node *root, int level, int exit_no)
 		}
 	}
 
-	if (root->nr_children > 0) {
-		//Force root to wait for children to finish
-		printf("%s: waiting for %d children...\n",
-				root->name, root->nr_children);
+	//Force root to wait for children to finish
+	printf("%s: waiting for %d children's values...\n",
+			root->name, root->nr_children);
 
-		//root has to wait for nr_children
-		for (i=0; i < root->nr_children; i++){
-			pid = wait(&status);
-       			explain_wait_status(pid, status);
+	/*
+	 *root has to wait for nr_children
+	 * if nr_children = 0, it's a leaf,
+	 * doesn't get in the for loop
+	 */
+	for (i=0; i < root->nr_children; i++){
+		
+		/* Read value from the pipe */
+		if (read(pfd[0], &val, sizeof(val)) != sizeof(val)) {
+			perror("parent: read from pipe");
+			exit(1);
 		}
-	} else if (root->nr_children == 0) {
-		//if root has no children, it's a leaf
-		printf("%s: Sleeping...\n", root->name);
-		sleep(SLEEP_PROC_SEC);
+		ans[i]= val;
+		/*Now wait for child to exit*/
+		pid = wait(&status);
+		explain_wait_status(pid, status);
 	}
-	printf("%s: Exiting...\n", root->name);
+	
+	/*
+	 *compute val for parent,
+	 *checked by the root name
+	 *currently works for multiplication
+	 *and addition, could be scaled
+	 */
+	if ((root->name[0])  == '+') {
+		val = ans[0] + ans[1];
+	} else if ((root->name[0]) == '*') {
+		val = ans[0] * ans[1];
+	} else 	sscanf(root->name, "%lf", &val);
+	
+	
+	/*write val into pipe for parent*/
+	if (write(pdf[1], &val, sizeof(val)) != sizeof(val)) {
+		perror("child: write to pipe");
+		exit(1);
+	}
+	
+        /*exit*/
+        printf("PID = %ld, name %s, exiting...\n",
+                        (long)getpid(), root->name);
+	
 	/*
 	 *creating a semi-unique exit number for
 	 *each proccess considering
@@ -98,6 +129,7 @@ int main(int argc, char *argv[])
 	/*check for input, get tree and print it*/
 	pid_t pid;
 	int status;
+	double ans;
 	struct tree_node *root;
 
         if (argc != 2) {
@@ -107,8 +139,8 @@ int main(int argc, char *argv[])
         }
 
 	/* Read tree into memory*/
-    root = get_tree_from_file(argv[1]);
-    print_tree(root);
+	root = get_tree_from_file(argv[1]);
+	print_tree(root);
 
 	/* Fork root of process tree */
 	pid = fork();
@@ -125,7 +157,13 @@ int main(int argc, char *argv[])
 	/*
 	 * Father
 	 */
-
+	
+	/* Read value from the pipe */
+        if (read(pfd[0], &ans, sizeof(ans)) != sizeof(ans)) {
+                perror("parent: read from pipe");
+                exit(1);
+	}
+	
 	/* for ask2-{fork, tree} */
 	sleep(SLEEP_TREE_SEC);
 
