@@ -8,16 +8,9 @@
 #include "proc-common.h"
 #include "tree.h"
 
-#define SLEEP_PROC_SEC  10
-#define SLEEP_TREE_SEC  3
-
-/*
- * Create given process tree:
- */
-
 
 static void
-__fork_procs(struct tree_node *root, int level, int exit_no)
+__fork_procs(int fd, struct tree_node *root, int level, int exit_no)
 {
 	/*
 	 * initial process is (*root).name.
@@ -28,73 +21,92 @@ __fork_procs(struct tree_node *root, int level, int exit_no)
         change_pname(root->name);
 
 	/*
-	 *Forking recursively to next
+	 * Forking recursively to next
 	 * child process in DFS order
 	 */
 
 	pid_t pid;
-	int i, status;
-	double val, ans[2];
-	
+	int i, pfd[2], status;
+	int val, ans[2];
+
+	/* root->name: Create pipe */
+	printf("%s: Creating pipe...\n",
+			root->name);
+	if (pipe(pfd) < 0) {
+		perror("pipe");
+		exit(1);
+	}
+
+		
 	for (i=0; i < root->nr_children; i++) {
 		pid = fork();
 		if (pid < 0) {
 			perror("fork_procs: fork");
 			exit(1);
 		} else if (pid == 0) {
-			__fork_procs(root->children + i, level + 1, i);
+			/* root will ask for children to write to it, so pfd[1] */
+			__fork_procs(pfd[1], root->children + i, level + 1, i);
 		}
 	}
 
-	//Force root to wait for children to finish
-	printf("%s: waiting for %d children's values...\n",
-			root->name, root->nr_children);
-
 	/*
-	 *root has to wait for nr_children
+	 * root has to wait for nr_children
 	 * if nr_children = 0, it's a leaf,
 	 * doesn't get in the for loop
 	 */
 	for (i=0; i < root->nr_children; i++){
 		
-		/* Read value from the pipe */
+		printf("Node %s with PID: %ld. Receiving an int value from child #%d.\n",
+                root->name, (long)getpid(), i+1);
+			
+		/* Read chid's value from the pipe */
 		if (read(pfd[0], &val, sizeof(val)) != sizeof(val)) {
 			perror("parent: read from pipe");
 			exit(1);
 		}
 		ans[i]= val;
-		/*Now wait for child to exit*/
+		
+		/* Now wait for child to exit */
 		pid = wait(&status);
 		explain_wait_status(pid, status);
 	}
 	
+	/* Info messages */
+	if (root->nr_children > 0) {
+		printf("Node %s with PID: %ld. Received values from children. ",
+                root->name, (long)getpid());
+		printf("Will now process and write to parent.\n");
+	} else {
+		printf("Leaf %s with PID %ld: Writing value to parent.\n",
+		root->name, (long)getpid());
+	}
+
 	/*
-	 *compute val for parent,
-	 *checked by the root name
-	 *currently works for multiplication
-	 *and addition, could be scaled
+	 * compute val for parent,
+	 * checked by the root name
+	 * currently works for multiplication
+	 * and addition, could be scaled
 	 */
 	if ((root->name[0])  == '+') {
 		val = ans[0] + ans[1];
 	} else if ((root->name[0]) == '*') {
 		val = ans[0] * ans[1];
-	} else 	sscanf(root->name, "%lf", &val);
+	} else 	sscanf(root->name, "%d", &val);
 	
-	
-	/*write val into pipe for parent*/
-	if (write(pdf[1], &val, sizeof(val)) != sizeof(val)) {
+	/* write val into pipe for parent */
+	if (write(fd, &val, sizeof(val)) != sizeof(val)) {
 		perror("child: write to pipe");
 		exit(1);
 	}
 	
-        /*exit*/
+        /* exit */
         printf("PID = %ld, name %s, exiting...\n",
                         (long)getpid(), root->name);
 	
 	/*
-	 *creating a semi-unique exit number for
-	 *each proccess considering
-	 *exit() outputs (exit_no)mod256
+	 * creating a semi-unique exit number for
+	 * each proccess considering
+	 * exit() outputs (exit_no)mod256
 	 */
 	exit_no += level*(10);
 	exit(exit_no);
@@ -102,13 +114,13 @@ __fork_procs(struct tree_node *root, int level, int exit_no)
 
 
 /*
- *the fuction we call to use the above,
- *level = 0, cuz we start from the root
+ * the fuction we call to use the above,
+ * level = 0, cuz we start from the root
  */
 void
-fork_procs(struct tree_node *root)
+fork_procs(int fd, struct tree_node *root)
 {
-	__fork_procs(root, 0, 1);
+	__fork_procs(fd, root, 0, 1);
 }
 
 
@@ -126,10 +138,10 @@ fork_procs(struct tree_node *root)
  */
 int main(int argc, char *argv[])
 {
-	/*check for input, get tree and print it*/
+	/* check for input, get tree and print it */
 	pid_t pid;
-	int status;
-	double ans;
+	int pfd[2], status;
+	int ans;
 	struct tree_node *root;
 
         if (argc != 2) {
@@ -138,10 +150,18 @@ int main(int argc, char *argv[])
                 exit(1);
         }
 
-	/* Read tree into memory*/
+	/* Read tree into memory */
 	root = get_tree_from_file(argv[1]);
 	print_tree(root);
 
+	/* main: Create pipe */
+	printf("main: Creating pipe...\n");
+	if (pipe(pfd) < 0) {
+		perror("pipe");
+		exit(1);
+	}
+
+	
 	/* Fork root of process tree */
 	pid = fork();
 	if (pid < 0) {
@@ -150,7 +170,7 @@ int main(int argc, char *argv[])
 	}
 	if (pid == 0) {
 		/* Child */
-		fork_procs(root);
+		fork_procs(pfd[1],root);
 		exit(1);
 	}
 
@@ -164,18 +184,12 @@ int main(int argc, char *argv[])
                 exit(1);
 	}
 	
-	/* for ask2-{fork, tree} */
-	sleep(SLEEP_TREE_SEC);
-
-	/* Print the process tree root at pid */
-	show_pstree(pid);
-
-	/* for ask2-signals */
-	/* kill(pid, SIGCONT); */
-
 	/* Wait for the root of the process tree to terminate */
 	pid = wait(&status);
 	explain_wait_status(pid, status);
+	
+	/* Print result */
+	printf("Answer is: %d\n", ans);
 
 	return 0;
 }
